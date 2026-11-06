@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuyList - Editorial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Fade transition for views */
+        .view-transition {
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Elegant Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #ffffff; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e5e5e5; 
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a3a3a3; 
+        }
+        /* Minimalist Input Fields */
+        .minimal-input {
+            border: none;
+            border-bottom: 1px solid #e5e5e5;
+            border-radius: 0;
+            padding: 0.75rem 0;
+            background: transparent;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .minimal-input:focus {
+            outline: none;
+            border-bottom-color: #000000;
+        }
+        /* Masonry Fixes */
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- Global Sync Loader -->
+    <div id="global-loader" class="fixed inset-0 bg-white/80 z-[100] hidden flex flex-col items-center justify-center backdrop-blur-sm transition-opacity">
+        <svg class="animate-spin h-8 w-8 text-black mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-xs uppercase tracking-widest font-semibold text-black">Syncing...</span>
+    </div>
+
+    <!-- Minimalist Navbar -->
+    <nav class="bg-white border-b border-gray-100 sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center">
+                <!-- Left: Back Button & Logo -->
+                <div class="flex items-center gap-4 w-1/3">
+                    <button id="nav-back-btn" class="hidden p-2 -ml-2 text-gray-400 hover:text-black transition-colors" title="Back to Gallery">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </button>
+                    
+                    <div class="cursor-pointer flex items-center" onclick="switchView('gallery')">
+                        <span class="font-serif text-2xl tracking-[0.2em] font-semibold text-black uppercase">BuyList</span>
+                    </div>
+                </div>
+
+                <!-- Center: Empty for minimal layout -->
+                <div class="hidden md:flex w-1/3 justify-center">
+                </div>
+
+                <!-- Right: Actions -->
+                <div class="flex items-center justify-end w-1/3 gap-6">
+                    <button id="nav-add-btn" class="text-xs uppercase tracking-widest font-semibold hover:text-gray-500 transition-colors flex items-center gap-2" onclick="openAddForm()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"></path></svg>
+                        <span class="hidden sm:inline">Add Item</span>
+                    </button>
+                    <button id="nav-menu-btn" class="text-xs uppercase tracking-widest font-semibold hover:text-gray-500 transition-colors flex items-center gap-2" onclick="toggleSidebar(true)">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        <span class="hidden md:inline">Menu</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/20 z-40 hidden transition-opacity duration-300 opacity-0" onclick="toggleSidebar(false)"></div>
+
+    <!-- Right Sidebar (Menu & Filters) -->
+    <div id="sidebar" class="fixed top-0 right-0 h-full w-full max-w-xs bg-white z-50 transform translate-x-full transition-transform duration-300 ease-in-out border-l border-gray-100 flex flex-col">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-serif text-xl text-black">Menu</h3>
+            <button onclick="toggleSidebar(false)" class="text-gray-400 hover:text-black transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-10">
+            <!-- Search -->
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">Search</label>
+                <div class="relative">
+                    <svg class="w-4 h-4 absolute left-0 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="sidebar-search" placeholder="Brands, items..." class="minimal-input pl-7 text-sm" onkeyup="handleSearch(this.value)">
+                </div>
+            </div>
+            <!-- Status Tabs -->
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">Status</label>
+                <div class="flex flex-col space-y-4 text-xs font-semibold uppercase tracking-widest">
+                    <button onclick="setTab('all')" id="tab-all" class="text-left text-black transition-all">All Items</button>
+                    <button onclick="setTab('active')" id="tab-active" class="text-left text-gray-400 hover:text-black transition-all">Wishlist</button>
+                    <button onclick="setTab('purchased')" id="tab-purchased" class="text-left text-gray-400 hover:text-black transition-all">Purchased</button>
+                </div>
+            </div>
+            <!-- Category Filter -->
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">Category</label>
+                <div class="relative">
+                    <select id="category-filter" onchange="setCategoryFilter(this.value)" class="w-full appearance-none bg-transparent border-b border-gray-200 text-black text-xs uppercase tracking-widest py-2 pr-8 cursor-pointer focus:outline-none focus:border-black transition-colors">
+                        <option value="all">All Categories</option>
+                    </select>
+                    <svg class="w-3 h-3 absolute right-0 top-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+            </div>
+            <!-- Price Range Filter -->
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3 flex justify-between">
+                    <span>Max Price</span>
+                    <span id="price-display" class="text-black"></span>
+                </label>
+                <input type="range" id="price-slider" min="0" max="1000" step="10" class="w-full accent-black" oninput="handlePriceFilter(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
+        <!-- ==================== VIEW 1: GALLERY ==================== -->
+        <div id="view-gallery" class="view-transition">
+            
+            <!-- Masonry Grid -->
+            <div id="gallery-container" class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8">
+                <!-- Items injected here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex-col items-center justify-center py-32 text-center">
+                <h3 class="font-serif text-3xl mb-4 text-gray-300 italic">Curate your collection</h3>
+                <p class="text-gray-400 max-w-md mx-auto mb-8 text-sm font-light">Your catalog is currently empty. Begin adding items you desire to track your future acquisitions.</p>
+                <button class="border border-black text-black hover:bg-black hover:text-white px-8 py-3 text-xs uppercase tracking-widest transition-colors" onclick="openAddForm()">
+                    Add Item
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== VIEW 2: ITEM DETAILS & CRUD ==================== -->
+        <div id="view-detail" class="hidden view-transition max-w-5xl mx-auto">
+            <div class="flex flex-col md:flex-row gap-12 lg:gap-20">
+                <!-- Image Side -->
+                <div class="md:w-1/2 relative bg-gray-50 flex items-center justify-center p-4 min-h-[400px]">
+                    <img id="detail-image" src="" alt="Product" class="w-full h-full object-contain max-h-[75vh]">
+                    <div id="detail-purchased-badge" class="hidden absolute top-4 left-4 bg-black text-white px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium">
+                        Purchased
+                    </div>
+                </div>
+                
+                <!-- Info & Actions Side -->
+                <div class="md:w-1/2 flex flex-col py-6">
+                    <div class="mb-8">
+                        <p id="detail-brand" class="text-xs uppercase tracking-[0.2em] text-gray-500 mb-3 empty:hidden"></p>
+                        <h2 id="detail-name" class="font-serif text-4xl text-black mb-4 leading-tight"></h2>
+                        <div class="flex items-center gap-4 mb-8">
+                            <div id="detail-price" class="text-xl font-light text-black"></div>
+                            <span id="detail-category" class="hidden border border-gray-200 text-gray-500 px-3 py-1 text-[10px] uppercase tracking-widest"></span>
+                        </div>
+                        
+                        <div class="w-8 h-px bg-black mb-6"></div>
+                        
+                        <h4 class="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 mb-3">Editor's Notes</h4>
+                        <p id="detail-desc" class="text-gray-700 whitespace-pre-wrap leading-relaxed font-light text-sm"></p>
+                    </div>
+
+                    <div id="detail-link-container" class="mb-10 hidden">
+                        <a id="detail-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-black hover:text-gray-500 transition-colors underline underline-offset-4">
+                            Visit Online Boutique
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </a>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="mt-auto grid grid-cols-2 gap-4">
+                        <button id="btn-toggle-purchase" class="col-span-2 py-4 bg-black text-white text-xs uppercase tracking-widest hover:bg-gray-800 transition-colors">
+                            <!-- Populated by JS -->
+                        </button>
+                        
+                        <button id="btn-edit" class="py-3 border border-gray-200 text-black text-xs uppercase tracking-widest hover:border-black transition-colors">
+                            Edit
+                        </button>
+                        
+                        <button id="btn-delete" class="py-3 border border-red-100 text-red-500 text-xs uppercase tracking-widest hover:border-red-500 transition-colors">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== VIEW 3: ADD / EDIT FORM ==================== -->
+        <div id="view-form" class="hidden view-transition max-w-2xl mx-auto">
+            <div class="mb-10 text-center">
+                <h2 id="form-title" class="font-serif text-3xl text-black">New Addition</h2>
+                <p class="text-gray-400 text-sm mt-2 font-light">Register a new item to your catalog.</p>
+            </div>
+            
+            <form id="item-form">
+                <input type="hidden" id="form-item-id">
+                
+                <div class="space-y-8">
+                    <!-- Brand -->
+                    <div>
+                        <label for="itemBrand" class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Brand / Designer</label>
+                        <input type="text" id="itemBrand" placeholder="e.g., Saint Laurent, Aesop" class="minimal-input">
+                    </div>
+
+                    <!-- Item Name -->
+                    <div>
+                        <label for="itemName" class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Item Name *</label>
+                        <input type="text" id="itemName" required placeholder="e.g., Loulou Small Bag" class="minimal-input">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Category -->
+                        <div>
+                            <label for="itemCategory" class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Category</label>
+                            <input type="text" id="itemCategory" list="category-suggestions" placeholder="e.g., Bags, Skincare" class="minimal-input">
+                            <datalist id="category-suggestions"></datalist>
+                        </div>
+
+                        <!-- Price -->
+                        <div>
+                            <label for="itemPrice" class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Estimated Price</label>
+                            <div class="relative">
+                                <span class="absolute left-0 top-3 text-gray-400 text-xs">RM</span>
+                                <input type="number" id="itemPrice" step="0.01" placeholder="0.00" class="minimal-input pl-8">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Image URL -->
+                    <div>
+                        <label for="itemImage" class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Image URL</label>
+                        <input type="url" id="itemImage" placeholder="https://..." class="minimal-input">
+                    </div>
+
+                    <!-- Product Link -->
+                    <div>
+                        <label for="itemLink" class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Store Link</label>
+                        <input type="url" id="itemLink" placeholder="https://..." class="minimal-input">
+                    </div>
+
+                    <!-- Details -->
+                    <div>
+                        <label for="itemDetails" class="block text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Notes</label>
+                        <textarea id="itemDetails" rows="3" placeholder="Sizing, shade names, or reasons for desire..." class="minimal-input resize-y"></textarea>
+                    </div>
+                </div>
+                
+                <div class="mt-12 flex flex-col-reverse sm:flex-row justify-end gap-4">
+                    <button type="button" class="px-8 py-4 border border-transparent text-gray-500 hover:text-black text-xs uppercase tracking-widest transition-colors" onclick="goBack()">Cancel</button>
+                    <button type="submit" class="px-10 py-4 bg-black text-white text-xs uppercase tracking-widest hover:bg-gray-800 transition-colors">Save to Catalog</button>
+                </div>
+            </form>
+        </div>
+
+    </main>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_1VCVHugXjPxRQNPAI61X_DPAYYkOBFkfjx6sJLUilTfVMbGRD3gsoq01vedcJ2p3/exec';
+        
+        // State Management
+        let buyList = []; // Will be populated from Google Sheets
+        let currentView = 'gallery';
+        let activeItemId = null; 
+        let currentTab = 'all'; 
+        let currentCategory = 'all';
+        let searchQuery = '';
+        let maxPriceFilter = Infinity;
+
+        // DOM Elements
+        const views = {
+            gallery: document.getElementById('view-gallery'),
+            detail: document.getElementById('view-detail'),
+            form: document.getElementById('view-form')
+        };
+        const nav = {
+            back: document.getElementById('nav-back-btn'),
+            add: document.getElementById('nav-add-btn'),
+            menu: document.getElementById('nav-menu-btn')
+        };
+        const galleryContainer = document.getElementById('gallery-container');
+        const emptyState = document.getElementById('empty-state');
+        const itemForm = document.getElementById('item-form');
+        const globalLoader = document.getElementById('global-loader');
+        
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        const priceSlider = document.getElementById('price-slider');
+        const priceDisplay = document.getElementById('price-display');
+
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const formatCurrency = (amount) => amount ? new Intl.NumberFormat('ms-MY', { style: 'currency', currency: 'MYR' }).format(amount) : '';
+
+        // --- NAVIGATION & VIEW ROUTING ---
+        function switchView(viewName) {
+            Object.values(views).forEach(el => el.classList.add('hidden'));
+            views[viewName].classList.remove('hidden');
+            currentView = viewName;
+
+            if (viewName === 'gallery') {
+                nav.back.classList.add('hidden');
+                nav.add.classList.remove('hidden');
+                nav.menu.classList.remove('hidden'); 
+                renderGallery(); 
+            } else {
+                nav.back.classList.remove('hidden');
+                nav.add.classList.add('hidden');
+                nav.menu.classList.add('hidden'); 
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function goBack() {
+            if (currentView === 'form' && activeItemId) {
+                switchView('detail');
+            } else {
+                switchView('gallery');
+            }
+        }
+
+        nav.back.addEventListener('click', goBack);
+
+        // --- SIDEBAR & MENU ---
+        function toggleSidebar(show) {
+            if (show) {
+                sidebarBackdrop.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    sidebarBackdrop.classList.remove('opacity-0');
+                    sidebar.classList.remove('translate-x-full');
+                });
+            } else {
+                sidebarBackdrop.classList.add('opacity-0');
+                sidebar.classList.add('translate-x-full');
+                setTimeout(() => {
+                    sidebarBackdrop.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        // --- SEARCH, FILTERING & TABS ---
+        function handleSearch(val) {
+            searchQuery = val.toLowerCase();
+            renderGallery();
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            ['all', 'active', 'purchased'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tab) {
+                    btn.className = "text-left text-black transition-all";
+                } else {
+                    btn.className = "text-left text-gray-400 hover:text-black transition-all";
+                }
+            });
+            renderGallery();
+        }
+
+        function setCategoryFilter(category) {
+            currentCategory = category;
+            renderGallery();
+        }
+
+        function handlePriceFilter(val) {
+            maxPriceFilter = parseFloat(val);
+            priceDisplay.textContent = formatCurrency(maxPriceFilter);
+            renderGallery();
+        }
+
+        function updateFilterUI() {
+            const categories = [...new Set(buyList.map(item => item.category).filter(Boolean))].sort();
+            
+            const select = document.getElementById('category-filter');
+            select.innerHTML = '<option value="all">All Categories</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                if (cat === currentCategory) option.selected = true;
+                select.appendChild(option);
+            });
+            
+            const datalist = document.getElementById('category-suggestions');
+            datalist.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                datalist.appendChild(option);
+            });
+
+            // Update Price Max Slider Scale dynamically
+            if (buyList.length > 0) {
+                const maxItemPrice = Math.max(...buyList.map(item => item.price || 0));
+                const maxLimit = Math.max(100, Math.ceil(maxItemPrice));
+                
+                priceSlider.max = maxLimit;
+                
+                if (maxPriceFilter === Infinity || maxPriceFilter > maxLimit) {
+                    maxPriceFilter = maxLimit;
+                    priceSlider.value = maxLimit;
+                }
+            } else {
+                priceSlider.max = 1000;
+                maxPriceFilter = 1000;
+                priceSlider.value = 1000;
+            }
+            priceDisplay.textContent = formatCurrency(maxPriceFilter);
+        }
+
+        // --- GALLERY VIEW ---
+        function renderGallery() {
+            galleryContainer.innerHTML = '';
+            updateFilterUI();
+            
+            if (buyList.length === 0) {
+                galleryContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            let filteredList = buyList.filter(item => {
+                const matchTab = currentTab === 'all' || 
+                                (currentTab === 'purchased' && item.purchased) ||
+                                (currentTab === 'active' && !item.purchased);
+                const matchCategory = currentCategory === 'all' || item.category === currentCategory;
+                const matchSearch = !searchQuery || 
+                                    item.name.toLowerCase().includes(searchQuery) || 
+                                    (item.brand && item.brand.toLowerCase().includes(searchQuery)) ||
+                                    (item.category && item.category.toLowerCase().includes(searchQuery));
+                
+                const itemPrice = item.price || 0;
+                const matchPrice = itemPrice <= maxPriceFilter;
+
+                return matchTab && matchCategory && matchSearch && matchPrice;
+            });
+
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            if (filteredList.length === 0) {
+                galleryContainer.classList.remove('hidden');
+                galleryContainer.innerHTML = `<div class="col-span-full py-20 text-center text-gray-400 font-light italic">No items match your criteria.</div>`;
+                return;
+            }
+
+            galleryContainer.classList.remove('hidden');
+
+            filteredList.forEach(item => {
+                const defaultImage = `https://placehold.co/600x800/f8f9fa/d1d5db?text=No+Image`;
+                const imageUrl = item.image || defaultImage;
+                
+                const card = document.createElement('div');
+                card.className = `masonry-item relative group cursor-pointer transition-opacity duration-300 ${item.purchased ? 'opacity-50 hover:opacity-80' : 'hover:opacity-80'}`;
+                card.onclick = () => openDetail(item.id);
+                
+                card.innerHTML = `
+                    <div class="bg-gray-50 mb-3 relative overflow-hidden">
+                        <img 
+                            src="${imageUrl}" 
+                            alt="${item.name}" 
+                            class="w-full h-auto object-cover block mix-blend-multiply"
+                            onerror="this.onerror=null;this.src='${defaultImage}';"
+                        >
+                        ${item.purchased ? `
+                            <div class="absolute top-2 left-2 bg-black text-white px-2 py-0.5 text-[8px] uppercase tracking-[0.2em]">
+                                Purchased
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="px-1">
+                        ${item.brand ? `<p class="text-[9px] uppercase tracking-[0.2em] text-gray-500 mb-1">${item.brand}</p>` : ''}
+                        <h3 class="font-serif text-lg text-black leading-snug mb-1">${item.name}</h3>
+                        <p class="text-sm font-light text-gray-600">${item.price ? formatCurrency(item.price) : ''}</p>
+                    </div>
+                `;
+                
+                galleryContainer.appendChild(card);
+            });
+        }
+
+        // --- DETAIL VIEW ---
+        function openDetail(id) {
+            const item = buyList.find(i => i.id === id);
+            if (!item) return switchView('gallery');
+
+            activeItemId = id;
+            const defaultImage = `https://placehold.co/800x800/f8f9fa/d1d5db?text=No+Image`;
+            
+            const imgEl = document.getElementById('detail-image');
+            imgEl.src = item.image || defaultImage;
+            imgEl.onerror = () => { imgEl.src = defaultImage; };
+            
+            document.getElementById('detail-name').textContent = item.name;
+            document.getElementById('detail-price').textContent = item.price ? formatCurrency(item.price) : '';
+            document.getElementById('detail-desc').textContent = item.details || 'No editorial notes provided.';
+            
+            const brandEl = document.getElementById('detail-brand');
+            if (item.brand) {
+                brandEl.textContent = item.brand;
+                brandEl.classList.remove('hidden');
+            } else {
+                brandEl.classList.add('hidden');
+            }
+
+            const catBadge = document.getElementById('detail-category');
+            if (item.category) {
+                catBadge.textContent = item.category;
+                catBadge.classList.remove('hidden');
+            } else {
+                catBadge.classList.add('hidden');
+            }
+
+            const linkContainer = document.getElementById('detail-link-container');
+            const linkEl = document.getElementById('detail-link');
+            if (item.link) {
+                linkContainer.classList.remove('hidden');
+                linkEl.href = item.link;
+            } else {
+                linkContainer.classList.add('hidden');
+            }
+
+            const badge = document.getElementById('detail-purchased-badge');
+            const toggleBtn = document.getElementById('btn-toggle-purchase');
+            
+            if (item.purchased) {
+                badge.classList.remove('hidden');
+                imgEl.classList.add('grayscale');
+                toggleBtn.className = "col-span-2 py-4 border border-black text-black text-xs uppercase tracking-widest hover:bg-black hover:text-white transition-colors";
+                toggleBtn.textContent = "Move to Wishlist";
+            } else {
+                badge.classList.add('hidden');
+                imgEl.classList.remove('grayscale');
+                toggleBtn.className = "col-span-2 py-4 bg-black text-white text-xs uppercase tracking-widest hover:bg-gray-800 transition-colors";
+                toggleBtn.textContent = "Mark as Purchased";
+            }
+
+            toggleBtn.onclick = () => togglePurchase(id);
+            document.getElementById('btn-edit').onclick = () => openEditForm(id);
+            document.getElementById('btn-delete').onclick = () => deleteItem(id);
+
+            switchView('detail');
+        }
+
+        function togglePurchase(id) {
+            const item = buyList.find(i => i.id === id);
+            if (item) {
+                item.purchased = !item.purchased;
+                updateDataOnServer({ action: 'update', data: { id: item.id, purchased: item.purchased } }, () => {
+                    openDetail(id);
+                });
+            }
+        }
+
+        function deleteItem(id) {
+            if(confirm("Remove this item from your catalog?")) {
+                const item = buyList.find(i => i.id === id);
+                buyList = buyList.filter(i => i.id !== id);
+                updateDataOnServer({ action: 'delete', id: id }, () => {
+                    switchView('gallery');
+                });
+            }
+        }
+
+        // --- FORM VIEW ---
+        function openAddForm() {
+            activeItemId = null;
+            itemForm.reset();
+            document.getElementById('form-item-id').value = '';
+            document.getElementById('form-title').textContent = 'New Addition';
+            switchView('form');
+        }
+
+        function openEditForm(id) {
+            const item = buyList.find(i => i.id === id);
+            if (!item) return;
+            
+            activeItemId = id;
+            document.getElementById('form-title').textContent = 'Edit Record';
+            
+            document.getElementById('form-item-id').value = item.id;
+            document.getElementById('itemBrand').value = item.brand || '';
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemCategory').value = item.category || '';
+            document.getElementById('itemPrice').value = item.price || '';
+            document.getElementById('itemImage').value = item.image || '';
+            document.getElementById('itemLink').value = item.link || '';
+            document.getElementById('itemDetails').value = item.details || '';
+            
+            switchView('form');
+        }
+
+        itemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('form-item-id').value;
+            const itemData = {
+                brand: document.getElementById('itemBrand').value.trim(),
+                name: document.getElementById('itemName').value.trim(),
+                category: document.getElementById('itemCategory').value.trim(),
+                price: parseFloat(document.getElementById('itemPrice').value) || null,
+                image: document.getElementById('itemImage').value.trim(),
+                link: document.getElementById('itemLink').value.trim(),
+                details: document.getElementById('itemDetails').value.trim()
+            };
+
+            if (id) {
+                const index = buyList.findIndex(i => i.id === id);
+                if (index !== -1) {
+                    buyList[index] = { ...buyList[index], ...itemData };
+                }
+                updateDataOnServer({ action: 'update', data: { id: id, ...itemData } }, () => {
+                    openDetail(id);
+                });
+            } else {
+                const newItem = {
+                    id: generateId(),
+                    ...itemData,
+                    createdAt: new Date().toISOString(),
+                    purchased: false
+                };
+                buyList.unshift(newItem);
+                updateDataOnServer({ action: 'create', data: newItem }, () => {
+                    switchView('gallery');
+                });
+            }
+        });
+
+        // --- SERVER COMMUNICATION & PERSISTENCE ---
+        function showLoader(show) {
+            if(show) {
+                globalLoader.classList.remove('hidden');
+            } else {
+                globalLoader.classList.add('hidden');
+            }
+        }
+
+        async function updateDataOnServer(payload, callback) {
+            showLoader(true);
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Prevents CORS preflight errors with Apps Script
+                    body: JSON.stringify(payload)
+                });
+                if (callback) callback();
+            } catch (error) {
+                console.error("Error syncing with server:", error);
+            } finally {
+                showLoader(false);
+                // Cache locally as backup
+                localStorage.setItem('myBuyList', JSON.stringify(buyList)); 
+            }
+        }
+
+        async function fetchInitialData() {
+            showLoader(true);
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    // Sheets append to the bottom, so reverse to show newest first
+                    buyList = result.data.reverse(); 
+                    localStorage.setItem('myBuyList', JSON.stringify(buyList));
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                // Fallback to local storage if offline or error occurs
+                buyList = JSON.parse(localStorage.getItem('myBuyList')) || [];
+            } finally {
+                showLoader(false);
+                renderGallery();
+            }
+        }
+
+        // Initialize App by fetching from Google Sheets
+        fetchInitialData();
+
+    </script>
+</body>
+</html>
